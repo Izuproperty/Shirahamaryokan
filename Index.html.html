@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ryokan / Minshuku Renovation Cost Calculator (Japan)</title>
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --panel:#111827; /* gray-900 */
+      --muted:#334155; /* slate-700 */
+      --text:#e5e7eb; /* gray-200 */
+      --accent:#22d3ee; /* cyan-400 */
+      --accent2:#a78bfa; /* violet-400 */
+      --good:#34d399; /* green-400 */
+      --warn:#fbbf24; /* amber-400 */
+      --bad:#f87171; /* red-400 */
+      --card:#0b1223;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(120deg,var(--bg),#060b1a);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    header{padding:24px 16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #1f2937;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent)}
+    .h1{font-size:clamp(18px,2.4vw,26px);font-weight:700;letter-spacing:.2px}
+    .sub{opacity:.85;font-size:12px}
+    main{display:grid;grid-template-columns:1fr;gap:16px;max-width:1200px;margin:20px auto;padding:0 12px 32px}
+    @media(min-width:980px){main{grid-template-columns:420px 1fr}}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02));border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden}
+    .card h2{margin:0;padding:14px 16px;border-bottom:1px solid #1f2937;background:radial-gradient(1200px 1200px at -10% -50%,rgba(34,211,238,.15),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));font-size:15px;letter-spacing:.3px}
+    .body{padding:16px;display:grid;gap:14px}
+    label{font-size:12px;opacity:.9}
+    input,select,button,textarea{font-family:inherit}
+    .row{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:end}
+    .row .inline{display:flex;gap:8px;align-items:center}
+    .row input[type="number"], .row input[type="text"]{width:100%;background:#0a1224;color:var(--text);border:1px solid #253049;border-radius:10px;padding:10px}
+    .row select{width:100%;background:#0a1224;color:var(--text);border:1px solid #253049;border-radius:10px;padding:10px}
+    .row .unit{font-size:12px;opacity:.8;margin-bottom:10px}
+    .muted{opacity:.8;font-size:12px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .tog{display:flex;align-items:center;gap:8px}
+    .tog input{accent-color:var(--accent)}
+    .btn{background:linear-gradient(180deg,var(--accent),#12b8d2);border:none;color:#00222a;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:linear-gradient(180deg,#64748b,#475569);color:#e5e7eb}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:#101a33;border:1px solid #233055;color:#bbdefb;padding:6px 8px;border-radius:999px;font-size:11px}
+    .kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    @media(min-width:700px){.kpi{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    .kpi .tile{background:linear-gradient(180deg,rgba(167,139,250,.1),rgba(34,211,238,.08));border:1px solid #223051;border-radius:14px;padding:12px}
+    .kpi .tile .label{font-size:12px;opacity:.85}
+    .kpi .tile .val{font-size:20px;font-weight:800;margin-top:4px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px dashed #27324a;font-size:13px}
+    th{text-align:left;opacity:.9}
+    tfoot td{font-weight:800}
+    .right{text-align:right}
+    .pill{padding:.2rem .5rem;border-radius:999px;background:#0e1a34;font-size:11px;border:1px solid #283659}
+    .footer{padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-top:1px solid #1f2937;background:linear-gradient(0deg,rgba(255,255,255,.04),transparent)}
+    a{color:#8ddcff}
+    .disclaimer{font-size:11px;opacity:.75}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="h1">Ryokan / Minshuku Renovation Cost Calculator (Japan)</div>
+      <div class="sub">Estimate renovation CapEx for a decommissioned inn (旅館/民宿). All figures in JPY. Tunable unit costs with presets.</div>
+    </div>
+    <div class="badge" id="buildInfo">v1.0 • Client‑side only</div>
+  </header>
+
+  <main>
+    <!-- INPUTS -->
+    <section class="card">
+      <h2>Inputs</h2>
+      <div class="body">
+
+        <div class="row">
+          <div>
+            <label>Total floor area (m²)</label>
+            <input type="number" id="area" value="180" min="1" step="1" />
+          </div>
+          <div>
+            <label class="unit">Assumption</label>
+            <div class="muted">Use measured 延床 (GFA). If unknown, start with 140–220 m² for a small ryokan.</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="row">
+            <div>
+              <label>Scope level</label>
+              <select id="scope">
+                <option value="lite">Lite (cosmetic, non‑structural)</option>
+                <option value="mid" selected>Mid (partial gut, systems refresh)</option>
+                <option value="full">Full gut (near rebuild)</option>
+              </select>
+            </div>
+            <div>
+              <label>Regional cost factor</label>
+              <select id="region">
+                <option value="0.95">Rural / Small town (0.95×)</option>
+                <option value="1.00" selected>Regional city / Onsen town (1.00×)</option>
+                <option value="1.10">Metro ring (1.10×)</option>
+                <option value="1.25">Central Tokyo/Osaka/Kyoto (1.25×)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Target use</label>
+              <select id="target">
+                <option value="personal" selected>Personal use (2条/適法居宅)</option>
+                <option value="minpaku">Minpaku / STVR compliance</option>
+                <option value="ryokan">Reopen as ryokan (旅館業法)</option>
+              </select>
+            </div>
+            <div>
+              <label>FX (optional, USD/JPY)</label>
+              <input type="number" id="fx" value="155" step="0.01" />
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="tog"><input type="checkbox" id="eq" checked><label>Seismic retrofit (耐震改修)</label></div>
+          <div class="tog"><input type="checkbox" id="roof" checked><label>Roof repair / re‑roof</label></div>
+          <div class="tog"><input type="checkbox" id="mep" checked><label>Full MEP (plumbing/electrical/HVAC)</label></div>
+          <div class="tog"><input type="checkbox" id="bath" checked><label>Bath upgrade (ofuro / communal)</label></div>
+          <div class="tog"><input type="checkbox" id="kitchen" checked><label>Commercial kitchen upgrade</label></div>
+          <div class="tog"><input type="checkbox" id="fire" checked><label>Fire safety (alarm, egress, sprinklers if required)</label></div>
+          <div class="tog"><input type="checkbox" id="ext" checked><label>Exterior envelope (siding/paint/windows)</label></div>
+          <div class="tog"><input type="checkbox" id="int" checked><label>Interior finishes (tatami, shoji, WCs)</label></div>
+          <div class="tog"><input type="checkbox" id="onsen"><label>Onsen source / boiler upgrade</label></div>
+          <div class="tog"><input type="checkbox" id="haz"><label>Hazard abatement (asbestos/lead, if any)</label></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="row">
+            <div>
+              <label>Design + permits (%)</label>
+              <input type="number" id="profPct" value="10" step="0.5" />
+            </div>
+            <div>
+              <label>Contingency (%)</label>
+              <input type="number" id="contPct" value="18" step="0.5" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>FF&E / Furnishings (JPY)</label>
+              <input type="number" id="ffne" value="3000000" step="50000" />
+            </div>
+            <div>
+              <label>Misc. approvals (JPY)</label>
+              <input type="number" id="approvals" value="500000" step="50000" />
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="inline">
+            <button class="btn" id="calc">Calculate</button>
+            <button class="btn secondary" id="reset">Reset</button>
+            <button class="btn secondary" id="share">Share link</button>
+            <button class="btn secondary" id="save">Save preset</button>
+            <select id="presets"></select>
+          </div>
+          <div class="muted">All numbers are rough planning estimates. Get quotes from licensed 建設業者 before committing.</div>
+        </div>
+
+      </div>
+      <div class="footer">
+        <span class="disclaimer">Typical unit‑cost bands (guidance): Lite ¥60–120k/m² • Mid ¥120–220k/m² • Full ¥220–350k/m². Seismic ¥40–80k/m². Fire safety ¥8–25k/m² (+sprinklers as needed). Kitchen/bath often add fixed amounts.</span>
+      </div>
+    </section>
+
+    <!-- OUTPUTS -->
+    <section class="card">
+      <h2>Estimate</h2>
+      <div class="body">
+        <div class="kpi">
+          <div class="tile"><div class="label">Base construction</div><div class="val" id="kBase">–</div></div>
+          <div class="tile"><div class="label">Add‑ons & systems</div><div class="val" id="kAdd">–</div></div>
+          <div class="tile"><div class="label">Soft costs (design/permits)</div><div class="val" id="kSoft">–</div></div>
+          <div class="tile"><div class="label">Contingency</div><div class="val" id="kCont">–</div></div>
+        </div>
+
+        <table id="tbl">
+          <thead>
+            <tr><th>Component</th><th class="right">Unit cost</th><th class="right">Qty</th><th class="right">Line total (JPY)</th></tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr><td colspan="3" class="right">Subtotal (hard + add‑ons)</td><td class="right" id="subHard">–</td></tr>
+            <tr><td colspan="3" class="right">Soft costs (design/permits)</td><td class="right" id="soft">–</td></tr>
+            <tr><td colspan="3" class="right">FF&E / Furnishings</td><td class="right" id="ff">–</td></tr>
+            <tr><td colspan="3" class="right">Misc. approvals</td><td class="right" id="appr">–</td></tr>
+            <tr><td colspan="3" class="right">Contingency</td><td class="right" id="cont">–</td></tr>
+            <tr><td colspan="3" class="right">Total (JPY)</td><td class="right" id="total">–</td></tr>
+            <tr><td colspan="3" class="right">Total (USD)</td><td class="right" id="totalUSD">–</td></tr>
+          </tfoot>
+        </table>
+
+        <div class="muted">Tip: toggle scope/add‑ons and adjust unit costs by clicking the unit‑cost cells. All calculations run locally in your browser.</div>
+      </div>
+    </section>
+
+    <!-- UNIT COSTS PANEL -->
+    <section class="card">
+      <h2>Unit‑Cost Assumptions</h2>
+      <div class="body">
+        <div class="grid-2">
+          <div>
+            <div class="muted">These defaults reflect recent bids in Japan (rural–regional markets). Adjust as needed for your contractor, building condition, or compliance path.</div>
+          </div>
+          <div class="right"><span class="pill" id="restore">Restore defaults</span></div>
+        </div>
+        <table id="ucTable">
+          <thead><tr><th>Item</th><th class="right">JPY per m² or fixed</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ------- Default unit costs (JPY) -------
+    const DEFAULTS = {
+      base_lite_per_m2: 90000,
+      base_mid_per_m2: 160000,
+      base_full_per_m2: 280000,
+      seismic_per_m2: 60000,
+      mep_per_m2: 35000,
+      ext_per_m2: 30000,
+      int_per_m2: 45000,
+      fire_per_m2: 15000,
+      roof_fixed: 1800000,
+      bath_fixed: 3000000,
+      kitchen_fixed: 2500000,
+      onsen_fixed: 1800000,
+      hazard_per_m2: 12000
+    };
+
+    // ------- State -------
+    let UC = {...DEFAULTS};
+
+    const $ = (q)=>document.querySelector(q);
+    const $$ = (q)=>document.querySelectorAll(q);
+
+    function yen(x){
+      return x.toLocaleString('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0});
+    }
+    function usd(x, fx){
+      if(!fx || fx<=0) return '—';
+      return x/fx; // returns number; format below
+    }
+
+    function readInputs(){
+      return {
+        area: +$('#area').value || 0,
+        scope: $('#scope').value,
+        region: +$('#region').value,
+        target: $('#target').value,
+        eq: $('#eq').checked,
+        roof: $('#roof').checked,
+        mep: $('#mep').checked,
+        bath: $('#bath').checked,
+        kitchen: $('#kitchen').checked,
+        fire: $('#fire').checked,
+        ext: $('#ext').checked,
+        int: $('#int').checked,
+        onsen: $('#onsen').checked,
+        haz: $('#haz').checked,
+        profPct: (+$('#profPct').value || 0)/100,
+        contPct: (+$('#contPct').value || 0)/100,
+        ffne: +$('#ffne').value || 0,
+        approvals: +$('#approvals').value || 0,
+        fx: +$('#fx').value || 0,
+      }
+    }
+
+    function line(name, unitCost, qty, isPerM2){
+      const total = (isPerM2? unitCost*qty : unitCost);
+      return {name, unitCost, qty: isPerM2? qty: 1, total, isPerM2};
+    }
+
+    function complianceMultiplier(target){
+      // Additional hidden cost pressure depending on regulatory path
+      // Personal: baseline; Minpaku: +5%; Ryokan: +12%
+      if(target==='minpaku') return 1.05;
+      if(target==='ryokan') return 1.12;
+      return 1.00;
+    }
+
+    function calc(){
+      const I = readInputs();
+      const basePerM2 = I.scope==='lite'? UC.base_lite_per_m2 : (I.scope==='mid'? UC.base_mid_per_m2 : UC.base_full_per_m2);
+      const rows = [];
+
+      const region = I.region;
+      const comp = complianceMultiplier(I.target);
+
+      rows.push(line(`Base construction (${I.scope})`, basePerM2*region*comp, I.area, true));
+
+      if(I.eq) rows.push(line('Seismic retrofit (耐震)', UC.seismic_per_m2*region, I.area, true));
+      if(I.mep) rows.push(line('MEP (plumbing/electrical/HVAC)', UC.mep_per_m2*region, I.area, true));
+      if(I.ext) rows.push(line('Exterior envelope (siding/windows/paint)', UC.ext_per_m2*region, I.area, true));
+      if(I.int) rows.push(line('Interior finishes (tatami/shoji/WC)', UC.int_per_m2*region, I.area, true));
+      if(I.fire) rows.push(line('Fire safety (alarm/egress/sprinklers*)', UC.fire_per_m2*region* (I.target==='ryokan'?1.15:1), I.area, true));
+      if(I.roof) rows.push(line('Roof repair / re-roof (fixed)', UC.roof_fixed*region, 1, false));
+      if(I.bath) rows.push(line('Bath upgrade (ofuro / communal, fixed)', UC.bath_fixed*region, 1, false));
+      if(I.kitchen) rows.push(line('Commercial kitchen upgrade (fixed)', UC.kitchen_fixed*region*(I.target==='personal'?0.6:1), 1, false));
+      if(I.onsen) rows.push(line('Onsen source/boiler upgrade (fixed)', UC.onsen_fixed*region, 1, false));
+      if(I.haz) rows.push(line('Hazard abatement (asbestos/lead)', UC.hazard_per_m2*region, I.area, true));
+
+      const subHard = rows.reduce((a,r)=>a+r.total,0);
+      const soft = subHard * I.profPct;
+      const contingency = (subHard + soft + I.ffne + I.approvals) * I.contPct;
+      const total = subHard + soft + I.ffne + I.approvals + contingency;
+
+      // Render KPI
+      const base = rows[0]?.total || 0;
+      const addons = subHard - base;
+      $('#kBase').textContent = yen(base);
+      $('#kAdd').textContent  = yen(addons);
+      $('#kSoft').textContent = yen(soft);
+      $('#kCont').textContent = yen(contingency);
+
+      // Render table
+      const tbody = $('#tbl tbody');
+      tbody.innerHTML = '';
+      rows.forEach(r=>{
+        const tr = document.createElement('tr');
+        const tdN = document.createElement('td');
+        tdN.textContent = r.name;
+        const tdU = document.createElement('td');
+        tdU.className='right editable';
+        tdU.textContent = r.isPerM2? yen(r.unitCost) + ' /m²' : yen(r.unitCost);
+        tdU.dataset.key = r.name; // ephemeral key for inline editing
+        const tdQ = document.createElement('td');
+        tdQ.className='right';
+        tdQ.textContent = r.isPerM2? r.qty.toLocaleString()+' m²' : '—';
+        const tdT = document.createElement('td');
+        tdT.className='right';
+        tdT.textContent = yen(r.total);
+        tr.append(tdN,tdU,tdQ,tdT);
+        tbody.appendChild(tr);
+      });
+
+      $('#subHard').textContent = yen(subHard);
+      $('#soft').textContent = yen(soft);
+      $('#ff').textContent = yen(I.ffne);
+      $('#appr').textContent = yen(I.approvals);
+      $('#cont').textContent = yen(contingency);
+      $('#total').textContent = yen(total);
+      const usdVal = usd(total, I.fx);
+      $('#totalUSD').textContent = (typeof usdVal === 'number')? usdVal.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}) : '—';
+
+      // store state in URL
+      history.replaceState(null,'', '#'+encodeURIComponent(JSON.stringify({...I, UC})))
+    }
+
+    // Inline edit of unit costs by clicking the unit-cost cells
+    function attachInlineEdit(){
+      $('#tbl').addEventListener('click', (e)=>{
+        const td = e.target.closest('.editable');
+        if(!td) return;
+        const isPerM2 = td.textContent.includes('/m²');
+        const cur = parseInt(td.textContent.replace(/[^0-9]/g,'')) || 0;
+        const nv = prompt(`Enter new ${isPerM2? 'unit cost per m²':'fixed amount'} in JPY:`, cur);
+        if(nv===null) return;
+        // We cannot trivially map back to UC key from name; just set a temporary override multiplier instead by adjusting DEFAULTS range? Simpler: set a global override table keyed by row index.
+        // For simplicity, we’ll update by guessing which UC key it corresponds to via keywords.
+        const name = td.dataset.key || '';
+        const val = +nv;
+        if(!(val>0)) return;
+        const kmap = [
+          ['Base construction','base_'+($('#scope').value)+'_per_m2'],
+          ['Seismic','seismic_per_m2'],
+          ['MEP','mep_per_m2'],
+          ['Exterior','ext_per_m2'],
+          ['Interior','int_per_m2'],
+          ['Fire','fire_per_m2'],
+          ['Roof','roof_fixed'],
+          ['Bath','bath_fixed'],
+          ['Commercial kitchen','kitchen_fixed'],
+          ['Onsen','onsen_fixed'],
+          ['Hazard','hazard_per_m2'],
+        ];
+        for(const [needle,key] of kmap){
+          if(name.includes(needle)){
+            UC[key] = val;
+            break;
+          }
+        }
+        calc();
+      });
+    }
+
+    function populateUC(){
+      const body = $('#ucTable tbody');
+      body.innerHTML = '';
+      const entries = [
+        ['Base lite (per m²)','base_lite_per_m2'],
+        ['Base mid (per m²)','base_mid_per_m2'],
+        ['Base full (per m²)','base_full_per_m2'],
+        ['Seismic (per m²)','seismic_per_m2'],
+        ['MEP (per m²)','mep_per_m2'],
+        ['Exterior (per m²)','ext_per_m2'],
+        ['Interior (per m²)','int_per_m2'],
+        ['Fire safety (per m²)','fire_per_m2'],
+        ['Roof (fixed)','roof_fixed'],
+        ['Bath / ofuro (fixed)','bath_fixed'],
+        ['Kitchen (fixed)','kitchen_fixed'],
+        ['Onsen/boiler (fixed)','onsen_fixed'],
+        ['Hazard abatement (per m²)','hazard_per_m2'],
+      ];
+      entries.forEach(([label,key])=>{
+        const tr=document.createElement('tr');
+        const td1=document.createElement('td'); td1.textContent=label;
+        const td2=document.createElement('td'); td2.className='right';
+        const inp=document.createElement('input');
+        inp.type='number'; inp.value=UC[key]; inp.step='1000'; inp.style.width='140px';
+        inp.addEventListener('change',()=>{UC[key]=+inp.value; calc();});
+        td2.appendChild(inp); tr.append(td1,td2); body.appendChild(tr);
+      });
+    }
+
+    function resetAll(){
+      UC = {...DEFAULTS};
+      $('#area').value = 180;
+      $('#scope').value = 'mid';
+      $('#region').value = '1.00';
+      $('#target').value = 'personal';
+      $('#eq').checked = true; $('#roof').checked = true; $('#mep').checked = true; $('#bath').checked = true; $('#kitchen').checked = true; $('#fire').checked = true; $('#ext').checked = true; $('#int').checked = true; $('#onsen').checked = false; $('#haz').checked = false;
+      $('#profPct').value = 10; $('#contPct').value = 18; $('#ffne').value = 3000000; $('#approvals').value = 500000; $('#fx').value = 155;
+      populateUC(); calc();
+    }
+
+    // Presets via localStorage
+    function loadPresets(){
+      const sel = $('#presets'); sel.innerHTML='';
+      const keys = Object.keys(localStorage).filter(k=>k.startsWith('ryokanPreset:'));
+      const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='Load preset…'; sel.appendChild(opt0);
+      keys.forEach(k=>{
+        const opt=document.createElement('option'); opt.value=k; opt.textContent=k.replace('ryokanPreset:',''); sel.appendChild(opt);
+      });
+      sel.addEventListener('change',()=>{
+        const k=sel.value; if(!k) return;
+        try{
+          const data=JSON.parse(localStorage.getItem(k));
+          if(data){
+            Object.assign(UC,data.UC||{});
+            for(const [id,val] of Object.entries(data.fields||{})){
+              const el = document.getElementById(id);
+              if(!el) continue;
+              if(el.type==='checkbox') el.checked=!!val; else el.value=val;
+            }
+            populateUC(); calc();
+          }
+        }catch(e){console.error(e)}
+      })
+    }
+
+    function savePreset(){
+      const name = prompt('Preset name (e.g., "Haibara small ryokan")');
+      if(!name) return;
+      const fields = {};
+      ['area','scope','region','target','profPct','contPct','ffne','approvals','fx'].forEach(id=>fields[id]=$('#'+id).value);
+      ['eq','roof','mep','bath','kitchen','fire','ext','int','onsen','haz'].forEach(id=>fields[id]=$('#'+id).checked);
+      const data = {UC, fields};
+      localStorage.setItem('ryokanPreset:'+name, JSON.stringify(data));
+      loadPresets();
+    }
+
+    function shareLink(){
+      const hash = location.hash || '#'+encodeURIComponent(JSON.stringify({UC, ...readInputs()}));
+      const url = location.origin + location.pathname + hash;
+      navigator.clipboard?.writeText(url);
+      alert('Copied shareable link with current assumptions to clipboard.');
+    }
+
+    function restoreDefaults(){ UC={...DEFAULTS}; populateUC(); calc(); }
+
+    function hydrateFromHash(){
+      if(!location.hash) return;
+      try{
+        const data = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+        if(data){
+          if(data.UC) UC = data.UC;
+          const ids = ['area','scope','region','target','profPct','contPct','ffne','approvals','fx'];
+          ids.forEach(id=>{ if(data[id]!==undefined){ const el=$('#'+id); if(el) el.value=data[id]; }});
+          ['eq','roof','mep','bath','kitchen','fire','ext','int','onsen','haz'].forEach(id=>{ if(data[id]!==undefined){ $('#'+id).checked=!!data[id]; }});
+        }
+      }catch(e){ console.warn('Bad hash state'); }
+    }
+
+    // Events
+    $('#calc').addEventListener('click', calc);
+    $('#reset').addEventListener('click', resetAll);
+    $('#share').addEventListener('click', shareLink);
+    $('#save').addEventListener('click', savePreset);
+    $('#restore').addEventListener('click', restoreDefaults);
+    ['area','scope','region','target','profPct','contPct','ffne','approvals','fx'].forEach(id=>{
+      $('#'+id).addEventListener('change', calc);
+    });
+    ['eq','roof','mep','bath','kitchen','fire','ext','int','onsen','haz'].forEach(id=>{
+      $('#'+id).addEventListener('change', calc);
+    });
+
+    attachInlineEdit();
+    populateUC();
+    hydrateFromHash();
+    calc();
+    loadPresets();
+  </script>
+</body>
+</html>
